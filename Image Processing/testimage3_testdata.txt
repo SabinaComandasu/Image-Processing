@@ -1,0 +1,6 @@
+Enter input image path: testimage3.jpg
+Enter output image path: output3.jpg
+Enter new width: 450
+Enter new height: 1000
+Enter rotation angle: 20
+Enter filter type (gaussianblur, sharpen, brightness, contrast, invert): brightness
