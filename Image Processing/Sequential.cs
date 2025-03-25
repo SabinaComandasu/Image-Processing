@@ -33,11 +33,11 @@ namespace ImageProcessing
             string outputFilename = Console.ReadLine();
             string outputPath = Path.Combine(outputDir, outputFilename);
 
-            Console.Write("Enter new width: ");
-            int newWidth = int.Parse(Console.ReadLine());
+            Console.Write("Enter new width (Max: 26000): ");
+            int newWidth = Math.Min(26000, int.Parse(Console.ReadLine()));
 
-            Console.Write("Enter new height: ");
-            int newHeight = int.Parse(Console.ReadLine());
+            Console.Write("Enter new height (Max: 78000): ");
+            int newHeight = Math.Min(78000, int.Parse(Console.ReadLine()));
 
             Console.Write("Enter rotation angle: ");
             float rotationAngle = float.Parse(Console.ReadLine());
@@ -49,9 +49,14 @@ namespace ImageProcessing
 
             using (var image = Image.Load<Rgba32>(inputPath))
             {
+                ImageProcessor.DownscaleImage(image, newWidth / 4, newHeight / 4);  
+
                 ImageProcessor.ApplyFilter(image, filterType);
-                ImageProcessor.ResizeImage(image, newWidth, newHeight);
+
+                ImageProcessor.ResizeImageInTilesAndSave(image, newWidth, newHeight, outputPath);
+
                 ImageProcessor.RotateImage(image, rotationAngle);
+
                 ImageProcessor.SaveImage(image, outputPath);
             }
 

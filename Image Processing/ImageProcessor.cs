@@ -40,13 +40,77 @@ namespace ImageProcessing
             Console.WriteLine($"Filter applied in: {sw.ElapsedMilliseconds} ms");
         }
 
-        public static void ResizeImage(Image<Rgba32> image, int newWidth, int newHeight)
+        public static void DownscaleImage(Image<Rgba32> image, int targetWidth, int targetHeight)
         {
-            Console.WriteLine($"Resizing image to {newWidth}x{newHeight}...");
+            Console.WriteLine($"Downscaling image to {targetWidth}x{targetHeight}...");
             Stopwatch sw = Stopwatch.StartNew();
-            image.Mutate(ctx => ctx.Resize(newWidth, newHeight));
+
+            image.Mutate(ctx => ctx.Resize(targetWidth, targetHeight));
+
             sw.Stop();
-            Console.WriteLine($"Resized in: {sw.ElapsedMilliseconds} ms");
+            Console.WriteLine($"Downscaled in: {sw.ElapsedMilliseconds} ms");
+        }
+
+        public static void ResizeImageInTilesAndSave(Image<Rgba32> image, int newWidth, int newHeight, string outputPath, int tileSize = 100)
+        {
+            Console.WriteLine($"Resizing image to {newWidth}x{newHeight} using smaller tiles and saving intermediate results...");
+
+            int originalWidth = image.Width;
+            int originalHeight = image.Height;
+
+            Stopwatch sw = Stopwatch.StartNew();
+
+            int xTiles = (originalWidth + tileSize - 1) / tileSize;
+            int yTiles = (originalHeight + tileSize - 1) / tileSize;
+
+            for (int x = 0; x < xTiles; x++)
+            {
+                for (int y = 0; y < yTiles; y++)
+                {
+                    int tileX = x * tileSize;
+                    int tileY = y * tileSize;
+                    int tileWidth = Math.Min(tileSize, originalWidth - tileX);
+                    int tileHeight = Math.Min(tileSize, originalHeight - tileY);
+
+                    var tile = image.Clone(ctx => ctx.Crop(new Rectangle(tileX, tileY, tileWidth, tileHeight)));
+
+                    var resizedTile = tile.Clone(ctx => ctx.Resize(newWidth / xTiles, newHeight / yTiles));
+
+                    string tempTilePath = Path.Combine(Path.GetDirectoryName(outputPath), $"temp_{x}_{y}.jpg");
+                    resizedTile.Save(tempTilePath);
+
+                    tile.Dispose();
+                    resizedTile.Dispose();
+
+                }
+            }
+
+            sw.Stop();
+            Console.WriteLine($"Resizing with tiles completed in: {sw.ElapsedMilliseconds} ms");
+
+            CombineTilesToFinalImage(xTiles, yTiles, outputPath);
+        }
+
+        private static void CombineTilesToFinalImage(int xTiles, int yTiles, string outputPath)
+        {
+            Console.WriteLine("Combining tiles into the final image...");
+            var finalImage = new Image<Rgba32>(xTiles * 100, yTiles * 100); 
+
+            for (int x = 0; x < xTiles; x++)
+            {
+                for (int y = 0; y < yTiles; y++)
+                {
+                    string tempTilePath = Path.Combine(Path.GetDirectoryName(outputPath), $"temp_{x}_{y}.jpg");
+                    var tile = Image.Load<Rgba32>(tempTilePath);
+
+                    finalImage.Mutate(ctx => ctx.DrawImage(tile, new Point(x * 100, y * 100), 1f));
+
+                    File.Delete(tempTilePath);
+                }
+            }
+
+            finalImage.Save(outputPath);
+            Console.WriteLine($"Final image saved to {outputPath}");
         }
 
         public static void RotateImage(Image<Rgba32> image, float angle)
